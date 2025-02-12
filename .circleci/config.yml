@@ -2,6 +2,119 @@ version: 2.1
 orbs:
   node: circleci/node@5
 jobs:
+#Stage Build
+  build-dependencies:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Installation des dépendances"
+  build-code-analysis:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Analyse du code"
+  build-cleaning-packaging:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Cleaning et Packaging"
+  stage-build-verification:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Tous les builds sont passés"
+
+#Stage Tests
+  unit-tests:
+    executor: node/default
+    environment:
+      JEST_JUNIT_OUTPUT_DIR: ./test-results/
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+      - run:
+          command: npm install jest-junit
+      - run:
+          name: Run tests
+          command: npm run test:ci
+      - store_test_results:
+          path: ./test-results/
+  integration-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "tests d'integration ok"
+  regression-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "tests de regression ok"
+  performance-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "tests de performance ok"
+  security-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "tests de sécurité ok"
+  compatibility-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "tests de compatibilité ok"
+  accessibility-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "tests d'accessibilité ok"
+  stage-test-verification:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "tous les tests sont ok"
+  
+
+#Stage Deploy
+  environment-preparation:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Préparation de l'environnement de déploiement"
+  application-deployment:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Déploiement de l'application"
+  verification-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Tests de vérification"
+  functional-validation-tests:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Tests de validation fonctionnelle"
+  load-testing:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Tests de charge"
+  deployment:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Déploiement"
+  monitoring-tracking:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Surveillance et suivi"
+  
+
   deploy_dev:
     executor: node/default
     steps:
@@ -20,41 +133,131 @@ jobs:
       - checkout
       - run: echo "Building things..."
   # Second job declared is for launching unit tests with Jest
-  unit-tests:
-    executor: node/default
-    environment:
-      JEST_JUNIT_OUTPUT_DIR: ./test-results/
-    steps:
-      - checkout
-      - node/install-packages:
-          pkg-manager: npm
-      - run:
-          command: npm install jest-junit
-      - run:
-          name: Run tests
-          command: npm run test:ci
-      - store_test_results:
-          path: ./test-results/
 workflows:
   version: 2
-  build_test_deploy:
+  pipeline_deployment:
     jobs:
-      - build
+      - build-dependencies
+      - build-code-analysis
+      - build-cleaning-packaging
+      - stage-build-verification:
+          requires:
+            - build-dependencies
+            - build-code-analysis
+            - build-cleaning-packaging
+
       - unit-tests:
           requires:
-            - build
-      - deploy_dev:
-          requires:
-            - unit-tests
+            - stage-build-verification
           filters:
             branches:
               only:
                 - develop
-
-      - deploy_prod:
+                - integration
+      - integration-tests:
+          requires:
+            - stage-build-verification
+      - regression-tests:
+          requires:
+            - stage-build-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+      - performance-tests:
+          requires:
+            - stage-build-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+      - security-tests:
+          requires:
+            - stage-build-verification
+      - compatibility-tests:
+          requires:
+            - stage-build-verification
+      - accessibility-tests:
+          requires:
+            - stage-build-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+      - stage-test-verification:
           requires:
             - unit-tests
+            - integration-tests
+            - regression-tests
+            - performance-tests
+            - security-tests
+            - compatibility-tests
+            - accessibility-tests
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+
+
+      - environment-preparation:
+          requires:
+            - stage-test-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+      - application-deployment:
+          requires:
+            - integration-tests
+            - security-tests
+            - compatibility-tests
           filters:
             branches:
               only:
                 - main
+      - verification-tests:
+          requires:
+            - stage-test-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+      - functional-validation-tests:
+          requires:
+            - stage-test-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+      - load-testing:
+          requires:
+            - stage-test-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
+      - deployment:
+          requires:
+            - integration-tests
+            - security-tests
+            - compatibility-tests
+          filters:
+            branches:
+              only:
+                - main
+      - monitoring-tracking:
+          requires:
+            - stage-test-verification
+          filters:
+            branches:
+              only:
+                - develop
+                - integration
