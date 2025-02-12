@@ -18,6 +18,11 @@ jobs:
     steps:
       - checkout
       - run: echo "Cleaning et Packaging"
+  stage-build-verification:
+    executor: node/default
+    steps:
+      - checkout
+      - run: echo "Tous les builds sont passés"
 
 #Stage Tests
   unit-tests:
@@ -135,12 +140,15 @@ workflows:
       - build-dependencies
       - build-code-analysis
       - build-cleaning-packaging
-
-      - unit-tests:
+      - stage-build-verification:
           requires:
             - build-dependencies
             - build-code-analysis
             - build-cleaning-packaging
+
+      - unit-tests:
+          requires:
+            - stage-build-verification
           filters:
             branches:
               only:
@@ -148,19 +156,10 @@ workflows:
                 - integration
       - integration-tests:
           requires:
-            - build-dependencies
-            - build-code-analysis
-            - build-cleaning-packaging
-          filters:
-            branches:
-              only:
-                - develop
-                - integration
+            - stage-build-verification
       - regression-tests:
           requires:
-            - build-dependencies
-            - build-code-analysis
-            - build-cleaning-packaging
+            - stage-build-verification
           filters:
             branches:
               only:
@@ -168,9 +167,7 @@ workflows:
                 - integration
       - performance-tests:
           requires:
-            - build-dependencies
-            - build-code-analysis
-            - build-cleaning-packaging
+            - stage-build-verification
           filters:
             branches:
               only:
@@ -178,29 +175,13 @@ workflows:
                 - integration
       - security-tests:
           requires:
-            - build-dependencies
-            - build-code-analysis
-            - build-cleaning-packaging
-          filters:
-            branches:
-              only:
-                - develop
-                - integration
+            - stage-build-verification
       - compatibility-tests:
           requires:
-            - build-dependencies
-            - build-code-analysis
-            - build-cleaning-packaging
-          filters:
-            branches:
-              only:
-                - develop
-                - integration
+            - stage-build-verification
       - accessibility-tests:
           requires:
-            - build-dependencies
-            - build-code-analysis
-            - build-cleaning-packaging
+            - stage-build-verification
           filters:
             branches:
               only:
@@ -232,12 +213,13 @@ workflows:
                 - integration
       - application-deployment:
           requires:
-            - stage-test-verification
+            - integration-tests
+            - security-tests
+            - compatibility-tests
           filters:
             branches:
               only:
-                - develop
-                - integration
+                - main
       - verification-tests:
           requires:
             - stage-test-verification
@@ -264,12 +246,13 @@ workflows:
                 - integration
       - deployment:
           requires:
-            - stage-test-verification
+            - integration-tests
+            - security-tests
+            - compatibility-tests
           filters:
             branches:
               only:
-                - develop
-                - integration
+                - main
       - monitoring-tracking:
           requires:
             - stage-test-verification
