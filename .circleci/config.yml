@@ -138,8 +138,13 @@ workflows:
   pipeline_deployment:
     jobs:
       - build-dependencies
-      - build-code-analysis
-      - build-cleaning-packaging
+      - build-code-analysis:
+          requires:
+            - build-dependencies
+      - build-cleaning-packaging:
+          requires:
+            - build-dependencies
+
       - stage-build-verification:
           requires:
             - build-dependencies
@@ -157,6 +162,10 @@ workflows:
       - integration-tests:
           requires:
             - stage-build-verification
+          filters:
+            branches:
+              only:
+                - main
       - regression-tests:
           requires:
             - stage-build-verification
@@ -176,9 +185,17 @@ workflows:
       - security-tests:
           requires:
             - stage-build-verification
+          filters:
+            branches:
+              only:
+                - main
       - compatibility-tests:
           requires:
             - stage-build-verification
+          filters:
+            branches:
+              only:
+                - main
       - accessibility-tests:
           requires:
             - stage-build-verification
